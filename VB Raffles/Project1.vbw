@@ -1,0 +1,6 @@
+frm_login = 0, 0, 0, 0, C, 0, 0, 0, 0, C
+frmRaffle = 0, 0, 0, 0, C, 0, 0, 0, 0, C
+dbconn = 0, 0, 0, 0, C
+RaffleViewMod = 0, 0, 0, 0, C
+frmSplash = 0, 0, 0, 0, C, 0, 0, 0, 0, C
+ValidationMod = 0, 0, 0, 0, C
