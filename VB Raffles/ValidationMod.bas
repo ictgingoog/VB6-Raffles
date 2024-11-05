@@ -53,3 +53,22 @@ Function StopSpin()
 
         frmRaffle.cmdSpin.SetFocus
 End Function
+Function EscapeCSV(ByVal inputString As String) As String
+    ' Convert empty values to the string "NULL"
+    If IsNull(inputString) Or inputString = "" Then
+        EscapeCSV = "NULL"
+    Else
+        ' For non-empty values, simply return the string without quotes
+        EscapeCSV = CStr(inputString)
+    End If
+End Function
+
+Function ReplaceNull(ByVal fieldValue As Variant) As String
+    ' Replace Null with an empty string
+    If IsNull(fieldValue) Then
+        ReplaceNull = "NULL"
+    Else
+        ReplaceNull = CStr(fieldValue)
+    End If
+End Function
+

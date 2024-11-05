@@ -180,4 +180,69 @@ ErrorHandler:
     End ' Terminate the program in case of an error
 End Sub
 
+Function partClount()
+On Error Resume Next
+
+    Dim conn As ADODB.Connection
+    Set conn = New ADODB.Connection
+    conn.ConnectionString = DBstr()
+    conn.Open
+
+    Dim rs As ADODB.Recordset
+    Set rs = New ADODB.Recordset
+
+    ' Execute the SELECT query with COUNT function
+    rs.Open "SELECT COUNT(*) AS RecordCount FROM participants", conn, adOpenKeyset, adLockOptimistic, adCmdText
+
+    ' Check if the recordset is not empty
+    If Not rs.EOF Then
+        ' Display the total number of entries in a label
+        frmRaffle.lblpartCount.Caption = "Total Entries: " & rs("RecordCount")
+    Else
+        ' If the recordset is empty, display a message in the label
+        frmRaffle.lblpartCount.Caption = "No Entries"
+    End If
+
+    rs.Close
+    conn.Close
+    Set rs = Nothing
+    Set conn = Nothing
+
+    ' Resume execution after an error
+    Resume Next
+End Function
+
+Function WinnerCount()
+    On Error Resume Next
+
+    Dim conn As ADODB.Connection
+    Set conn = New ADODB.Connection
+    conn.ConnectionString = DBstr()
+    conn.Open
+
+    Dim rs As ADODB.Recordset
+    Set rs = New ADODB.Recordset
+
+    ' Execute the SELECT query with COUNT function for the "winner" table
+    rs.Open "SELECT COUNT(*) AS RecordCount FROM winner", conn, adOpenKeyset, adLockOptimistic, adCmdText
+
+    ' Check if the recordset is not empty
+    If Not rs.EOF Then
+        ' Display the total number of entries in a label
+        ' Replace "LabelName" with the actual name of your label
+        frmRaffle.lblcountWinner.Caption = "Total Winners: " & rs("RecordCount")
+    Else
+        ' If the recordset is empty, display a message in the label
+        ' Replace "LabelName" with the actual name of your label
+        frmRaffle.lblcountWinner.Caption = "No Winners Yet"
+    End If
+
+    rs.Close
+    conn.Close
+    Set rs = Nothing
+    Set conn = Nothing
+
+    ' Resume execution after an error
+    Resume Next
+End Function
 

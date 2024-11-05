@@ -5,7 +5,7 @@ Begin VB.Form frmRaffle
    Caption         =   "E-Raffles"
    ClientHeight    =   11655
    ClientLeft      =   45
-   ClientTop       =   390
+   ClientTop       =   690
    ClientWidth     =   17205
    LinkTopic       =   "Form1"
    MaxButton       =   0   'False
@@ -107,7 +107,7 @@ Begin VB.Form frmRaffle
          Height          =   615
          Left            =   240
          TabIndex        =   21
-         Text            =   "Price"
+         Text            =   "Prize"
          Top             =   2880
          Width           =   3015
       End
@@ -121,7 +121,7 @@ Begin VB.Form frmRaffle
          Height          =   435
          Left            =   14280
          TabIndex        =   18
-         Top             =   3240
+         Top             =   2880
          Width           =   2655
          _ExtentX        =   4683
          _ExtentY        =   767
@@ -153,8 +153,8 @@ Begin VB.Form frmRaffle
       Begin VB.CommandButton cmdSpin 
          Caption         =   "SPIN"
          BeginProperty Font 
-            Name            =   "MS Sans Serif"
-            Size            =   9.75
+            Name            =   "Calibri"
+            Size            =   18
             Charset         =   0
             Weight          =   700
             Underline       =   0   'False
@@ -196,9 +196,47 @@ Begin VB.Form frmRaffle
          EndProperty
          NumItems        =   0
       End
+      Begin VB.Label lblcountWinner 
+         BackStyle       =   0  'Transparent
+         Caption         =   "Total Winners:"
+         BeginProperty Font 
+            Name            =   "Calibri Light"
+            Size            =   14.25
+            Charset         =   0
+            Weight          =   300
+            Underline       =   0   'False
+            Italic          =   0   'False
+            Strikethrough   =   0   'False
+         EndProperty
+         ForeColor       =   &H00FFFFFF&
+         Height          =   375
+         Left            =   240
+         TabIndex        =   24
+         Top             =   3480
+         Width           =   2175
+      End
+      Begin VB.Label lblpartCount 
+         BackStyle       =   0  'Transparent
+         Caption         =   "Total Count: "
+         BeginProperty Font 
+            Name            =   "Calibri Light"
+            Size            =   14.25
+            Charset         =   0
+            Weight          =   300
+            Underline       =   0   'False
+            Italic          =   0   'False
+            Strikethrough   =   0   'False
+         EndProperty
+         ForeColor       =   &H00FFFFFF&
+         Height          =   375
+         Left            =   14280
+         TabIndex        =   23
+         Top             =   3360
+         Width           =   2175
+      End
       Begin VB.Label Label4 
          BackStyle       =   0  'Transparent
-         Caption         =   "Enter Price"
+         Caption         =   "Enter Prize"
          BeginProperty Font 
             Name            =   "Calibri Light"
             Size            =   14.25
@@ -230,9 +268,9 @@ Begin VB.Form frmRaffle
          EndProperty
          ForeColor       =   &H00FFFFFF&
          Height          =   495
-         Left            =   14520
+         Left            =   14640
          TabIndex        =   20
-         Top             =   2760
+         Top             =   2400
          Width           =   2175
       End
       Begin VB.Label lblMult 
@@ -250,9 +288,9 @@ Begin VB.Form frmRaffle
          EndProperty
          ForeColor       =   &H00FFFFFF&
          Height          =   975
-         Left            =   14880
+         Left            =   15000
          TabIndex        =   19
-         Top             =   1800
+         Top             =   1560
          Width           =   1215
       End
       Begin VB.Label lblColor21 
@@ -376,7 +414,7 @@ Begin VB.Form frmRaffle
    Begin VB.Label Label2 
       Alignment       =   1  'Right Justify
       BackStyle       =   0  'Transparent
-      Caption         =   "Status: Prototype; Version 0.8 (202312-10)"
+      Caption         =   "Status: Prototype; Version 0.8.5 (202312-19)"
       Height          =   255
       Left            =   10560
       TabIndex        =   16
@@ -385,7 +423,7 @@ Begin VB.Form frmRaffle
    End
    Begin VB.Label Label1 
       BackStyle       =   0  'Transparent
-      Caption         =   "Developed by: Rex V.; Design By Kim Oclarit; Unauthorized use is PROHIBITED"
+      Caption         =   "Developed by: Rex V.; Design By Kim O.; Unauthorized use is PROHIBITED"
       Height          =   255
       Left            =   0
       TabIndex        =   15
@@ -398,6 +436,21 @@ Begin VB.Form frmRaffle
       Stretch         =   -1  'True
       Top             =   0
       Width           =   5625
+   End
+   Begin VB.Menu mnFile 
+      Caption         =   "File"
+      Begin VB.Menu mnImportPart 
+         Caption         =   "Import Participants"
+      End
+      Begin VB.Menu mnExPart 
+         Caption         =   "Export Participants"
+      End
+      Begin VB.Menu mnExport 
+         Caption         =   "Export Winners"
+      End
+      Begin VB.Menu mnReset 
+         Caption         =   "Reset Raffles"
+      End
    End
 End
 Attribute VB_Name = "frmRaffle"
@@ -426,6 +479,9 @@ End Sub
 Private Sub Form_Load()
 viewParticipants
 viewWinners
+
+partClount
+WinnerCount
 End Sub
 
 Private Sub Form_Unload(Cancel As Integer)
@@ -457,6 +513,277 @@ End Sub
 
 Private Sub lblName_Click()
 Unload frmSplash
+End Sub
+
+Private Sub mnExPart_Click()
+    On Error GoTo ErrorHandler
+
+    Dim conn As ADODB.Connection
+    Set conn = New ADODB.Connection
+    conn.ConnectionString = DBstr()
+    conn.Open
+
+    Dim rs As ADODB.Recordset
+    Set rs = New ADODB.Recordset
+
+    ' Execute the SELECT query
+    rs.Open "SELECT pid, Name, Department, Designation, Organization, AddedBy " & _
+            "FROM participants", conn, adOpenKeyset, adLockOptimistic, adCmdText
+
+    ' Display Save As dialog to choose the save location
+    Dim fileDialog As Object
+    Set fileDialog = CreateObject("MSComDlg.CommonDialog")
+
+    With fileDialog
+        .DialogTitle = "Save CSV File"
+        .Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
+        .FilterIndex = 1
+        .ShowSave
+        filePath = .FileName
+    End With
+
+    ' Check if the user canceled the Save As dialog
+    If filePath = "" Then
+        Exit Sub
+    End If
+
+    ' Open the CSV file for writing
+    Dim fileNumber As Integer
+    fileNumber = FreeFile
+    Open filePath For Output As fileNumber
+
+    ' Write the headers to the CSV file
+    Print #fileNumber, "pid,Name,Department,Designation,Organization,AddedBy"
+
+    ' Export data to CSV
+    Do While Not rs.EOF
+        Print #fileNumber, ReplaceNull(rs("pid")) & "," & _
+                            EscapeCSV(ReplaceNull(rs("Name"))) & "," & _
+                            EscapeCSV(ReplaceNull(rs("Department"))) & "," & _
+                            EscapeCSV(ReplaceNull(rs("Designation"))) & "," & _
+                            EscapeCSV(ReplaceNull(rs("Organization"))) & "," & _
+                            EscapeCSV(ReplaceNull(rs("AddedBy")))
+
+        rs.MoveNext
+    Loop
+
+    ' Close the CSV file and clean up
+    Close fileNumber
+    rs.Close
+    conn.Close
+    Set rs = Nothing
+    Set conn = Nothing
+
+    MsgBox "Data exported to CSV successfully.", vbInformation
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Error Exporting Data: " & Err.Description, vbCritical, "Error"
+
+End Sub
+
+Private Sub mnExport_Click()
+' Display Save As dialog to choose the save location
+    Dim fileDialog As Object
+    Set fileDialog = CreateObject("MSComDlg.CommonDialog")
+
+    With fileDialog
+        .DialogTitle = "Save CSV File"
+        .Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
+        .FilterIndex = 1
+        .ShowSave
+        filePath = .FileName
+    End With
+
+    ' Check if the user canceled the Save As dialog
+    If filePath = "" Then
+        Exit Sub
+    End If
+
+    ' Open the CSV file for writing
+    fileNumber = FreeFile
+    Open filePath For Output As fileNumber
+
+    ' Write the headers to the CSV file
+    Print #fileNumber, "Name,Department-Designation,DateTime,Price"
+
+    ' Export data to CSV
+    Dim conn As ADODB.Connection
+    Dim rs As ADODB.Recordset
+    Dim i As Integer
+    Set conn = New ADODB.Connection
+    conn.ConnectionString = DBstr()
+    conn.Open
+
+    Set rs = New ADODB.Recordset
+    rs.Open "SELECT Name, Station AS Department_Designation, DateTime, Price " & _
+            "FROM winner ORDER BY DateTime DESC", conn, adOpenKeyset, adLockOptimistic, adCmdText
+
+    Do While Not rs.EOF
+        i = i + 1
+        ' Write data to the CSV file
+        Print #fileNumber, EscapeCSV(rs("Name")) & "," & _
+                        EscapeCSV(IIf(IsNull(rs("Department_Designation")), "", rs("Department_Designation"))) & "," & _
+                        EscapeCSV(IIf(IsNull(rs("DateTime")), "", rs("DateTime"))) & "," & _
+                        EscapeCSV(IIf(IsNull(rs("Price")), "", rs("Price")))
+        rs.MoveNext
+    Loop
+
+    ' Close the CSV file
+    Close fileNumber
+
+    MsgBox "Data exported to CSV successfully.", vbInformation
+
+    ' Clean up
+    rs.Close
+    Set rs = Nothing
+    conn.Close
+    Set conn = Nothing
+End Sub
+
+Private Sub mnImportPart_Click()
+On Error GoTo ErrorHandler
+
+Dim conn As ADODB.Connection
+Set conn = New ADODB.Connection
+conn.ConnectionString = DBstr()
+conn.Open
+
+' Prompt the user to select a CSV file
+Dim fileDialog As Object
+Set fileDialog = CreateObject("MSComDlg.CommonDialog")
+
+With fileDialog
+    .DialogTitle = "Select CSV File to Import"
+    .Filter = "CSV Files (*.csv)|*.csv|All Files (*.*)|*.*"
+    .FilterIndex = 1
+    .ShowOpen
+    filePath = .FileName
+End With
+
+' Check if the user canceled the Open dialog
+If filePath = "" Then
+    Exit Sub
+End If
+
+' Truncate the existing data in the participants table
+conn.Execute "TRUNCATE TABLE participants"
+
+' Open the CSV file for reading
+Dim fileNumber As Integer
+fileNumber = FreeFile
+Open filePath For Input As fileNumber
+
+' Skip the header line
+Line Input #fileNumber, csvHeader
+
+' Read and insert data from the CSV file
+Do While Not EOF(fileNumber)
+    Line Input #fileNumber, csvLine
+
+    ' Use parameterized query to handle special characters
+    Dim cmd As ADODB.Command
+    Set cmd = New ADODB.Command
+    cmd.ActiveConnection = conn
+    cmd.CommandText = "INSERT INTO participants (pid, Name, Department, Designation, Organization, AddedBy) " & _
+                      "VALUES (?, ?, ?, ?, ?, ?)"
+
+    ' Split the CSV line into an array
+    csvFields = Split(csvLine, ",")
+
+    ' Set parameters
+    Dim parameterValue As String
+    For i = 0 To UBound(csvFields)
+        parameterValue = Trim(csvFields(i))
+        
+        ' Check if the field is quoted and remove quotes
+        If Left(parameterValue, 1) = """" And Right(parameterValue, 1) = """" Then
+            parameterValue = Mid(parameterValue, 2, Len(parameterValue) - 2)
+        End If
+        
+        ' Replace single quotes with double single quotes for SQL
+        parameterValue = Replace(parameterValue, "'", "''")
+        
+        ' If the parameter is empty, replace with NULL
+        If Len(parameterValue) = 0 Then
+            parameterValue = "NULL"
+        End If
+        
+        ' Add the parameter to the command
+        cmd.Parameters.Append cmd.CreateParameter("param" & i, adVarChar, adParamInput, Len(parameterValue), parameterValue)
+    Next i
+
+    ' Execute the parameterized query
+    cmd.Execute
+Loop
+
+' Close the CSV file and clean up
+Close fileNumber
+conn.Close
+Set conn = Nothing
+
+MsgBox "Participants imported successfully.", vbInformation
+
+partClount
+Exit Sub
+
+ErrorHandler:
+    MsgBox "Error Importing Participants: " & Err.Description, vbCritical, "Error"
+
+    ' Log the error and details to a text file
+    Dim logFileNumber As Integer
+    logFileNumber = FreeFile
+    Open "ImportErrorLog.txt" For Append As logFileNumber
+    Print #logFileNumber, "Error Description: " & Err.Description
+    Print #logFileNumber, "CSV Line: " & csvLine
+    Print #logFileNumber, "Query: " & Replace(cmd.CommandText, "?", paramString, 1, -1, vbTextCompare)
+    Print #logFileNumber, "------------------------"
+    Close logFileNumber
+
+    Resume Next
+
+End Sub
+
+Private Sub mnReset_Click()
+ On Error GoTo ErrorHandler
+
+    ' Prompt the user to confirm the truncation
+    Dim userInput As String
+    userInput = InputBox("Enter 'YES DELETE WINNERS' to proceed. This will be irreversible.")
+
+    ' Check if the entered value is correct
+    If UCase(userInput) = "YES DELETE WINNERS" Then
+        ' User entered the correct value, proceed with truncation
+        Dim conn As ADODB.Connection
+        Set conn = New ADODB.Connection
+        conn.ConnectionString = DBstr()
+        conn.Open
+
+        ' Execute the TRUNCATE TABLE statement
+        conn.Execute "TRUNCATE TABLE winner"
+
+        ' Clean up
+        conn.Close
+        Set conn = Nothing
+
+        MsgBox "Winners table has been RESET.", vbInformation
+        
+        'Display Winners
+        viewWinners
+    Else
+        ' User entered an incorrect value or canceled, do nothing
+        MsgBox "Winners RESET canceled. Incorrect input or canceled by user.", vbInformation
+    End If
+    
+    'Recount the Number of Entries After Reset
+        WinnerCount
+        partClount
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "Error Truncating Winner Table: " & Err.Description, vbCritical, "Error"
+
 End Sub
 
 Private Sub Slider1_Change()
@@ -500,6 +827,8 @@ SaveWinnerData
         'for Counter
         Timer1.Enabled = False
         
+        WinnerCount
+        partClount
 End Sub
 
 Private Sub timerExec_Timer()
