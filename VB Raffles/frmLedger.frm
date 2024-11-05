@@ -146,7 +146,7 @@ Begin VB.Form frmRaffle
       End
       Begin VB.Timer timerExec 
          Enabled         =   0   'False
-         Interval        =   10
+         Interval        =   50
          Left            =   240
          Top             =   480
       End
@@ -806,10 +806,12 @@ End If
 End Sub
 
 Private Sub timerDuration_Timer()
+
+displayRandomEntry
+
 'Function StopSpin Routine
 StopSpin
 frmSplash.Show
-
 
 SaveWinnerData
 
@@ -832,19 +834,27 @@ SaveWinnerData
 End Sub
 
 Private Sub timerExec_Timer()
-displayRandomEntry
+'displayRandomEntry
 
-If frmRaffle.lblName = "N/A" And frmRaffle.lblDept = "N/A" Then
-'Disable The timers when there are no eligible participants"
-timerExec.Enabled = False
-timerDuration.Enabled = False
+' Check if both labels are "N/A" (i.e., no eligible participants)
+    If frmRaffle.lblName.Caption = "N/A" And frmRaffle.lblDept.Caption = "N/A" Then
+        ' Disable the timers when there are no eligible participants
+        timerExec.Enabled = False
+        timerDuration.Enabled = False
 
-'Show alert if there no eligible participants
-    MsgBox "There are no Eligible Winners", vbInformation, "Error"
+        ' Show alert if there are no eligible participants
+        MsgBox "There are no Eligible Winners", vbInformation, "Error"
 
-'Enable the Spin Button
-Me.cmdSpin.Enabled = True
-End If
+        ' Enable the Spin Button
+        Me.cmdSpin.Enabled = True
+
+        ' Exit the subroutine since there's no need to continue
+        Exit Sub
+    End If
+
+    ' If the labels are not "N/A", generate and display random strings for the labels
+    frmRaffle.lblName.Caption = generateRandomString(25) ' 10-character random string for Name
+    frmRaffle.lblDept.Caption = generateRandomString(35) ' 15-character random string for Department
 
 End Sub
 

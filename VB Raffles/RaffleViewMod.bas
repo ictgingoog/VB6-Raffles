@@ -94,45 +94,94 @@ Function viewParticipants() As String
 
 End Function
 Function displayRandomEntry()
+    On Error GoTo ErrorHandler ' Add error handling
+
     Dim conn As ADODB.Connection
     Dim rs As ADODB.Recordset
     Dim randompid As String
     Dim randomName As String
     Dim randomDept As String
     Dim currentTime As String
+    Dim eligibleDepartments As Collection
+    Dim departmentParticipants As Object ' Use Object for dictionary-like behavior
+    Dim selectedDept As String
+    Dim attempts As Long
+    Dim randomDeptIndex As Long
+    Dim randomParticipantIndex As Long
+    Const MAX_ATTEMPTS As Long = 10 ' Limit the number of attempts to avoid infinite loops
 
+    ' Initialize and open the connection
     Set conn = New ADODB.Connection
     conn.ConnectionString = DBstr()
     conn.Open
 
+    ' Initialize the recordset
     Set rs = New ADODB.Recordset
 
-    ' Retrieve a random entry excluding pids from the winner table
-    rs.Open "SELECT pid, Name, Department, Designation " & _
-        "FROM participants " & _
-        "WHERE NOT EXISTS " & _
-        "(SELECT 1 FROM winner WHERE winner.pid = participants.pid) " & _
-        "ORDER BY RAND() LIMIT 1", _
-        conn, adOpenKeyset, adLockOptimistic, adCmdText
+    ' Step 1: Retrieve all eligible departments and participants in a single query
+    rs.Open "SELECT Department, pid, Name, Designation " & _
+            "FROM participants " & _
+            "WHERE NOT EXISTS " & _
+            "(SELECT 1 FROM winner WHERE winner.pid = participants.pid)", _
+            conn, adOpenStatic, adLockReadOnly, adCmdText
 
-    If Not rs.EOF Then
-        randompid = rs("pid").Value
-        randomName = rs("Name").Value
-        randomDept = rs("Department").Value & " - " & rs("Designation").Value
-    Else
-        'Set Countdown to Slider Value
-        frmRaffle.lblMult.Caption = frmRaffle.Slider1
-        
-        StopSpin
-        
+    ' Initialize collections to store eligible departments and participants
+    Set eligibleDepartments = New Collection
+    Set departmentParticipants = CreateObject("Scripting.Dictionary") ' Dictionary to store participants by department
+
+    ' Process the result set
+    Do While Not rs.EOF
+        ' Group participants by department
+        If Not departmentParticipants.Exists(rs("Department").Value) Then
+            eligibleDepartments.Add rs("Department").Value
+            departmentParticipants.Add rs("Department").Value, New Collection
+        End If
+        departmentParticipants(rs("Department").Value).Add Array(rs("pid").Value, rs("Name").Value, rs("Designation").Value)
+        rs.MoveNext
+    Loop
+    rs.Close
+
+    ' If no eligible departments are found, handle it
+    If eligibleDepartments.Count = 0 Then
+        frmRaffle.lblMult.Caption = frmRaffle.Slider1 ' Set Countdown to Slider Value
+        StopSpin ' Stop the spinning/raffle process
         MsgBox "All participants have won!", vbInformation, "Raffle Over"
-        'Execute SpotSpin Routine
-        
         Exit Function
     End If
 
-    rs.Close
-    Set rs = Nothing
+    ' Step 2: Loop to find a department with eligible participants
+    attempts = 0
+    Do
+        ' Generate a random index to select a department
+        Randomize ' Initialize the random number generator
+        randomDeptIndex = Int(Rnd() * eligibleDepartments.Count) + 1
+        selectedDept = eligibleDepartments(randomDeptIndex)
+
+        ' Check if the selected department has eligible participants
+        If departmentParticipants(selectedDept).Count > 0 Then
+            Exit Do ' Found a department with eligible participants
+        End If
+
+        ' Increment the attempt counter to avoid infinite loops
+        attempts = attempts + 1
+        If attempts >= MAX_ATTEMPTS Then
+            MsgBox "Unable to find a department with eligible participants.", vbExclamation, "Error"
+            Exit Function
+        End If
+
+    Loop
+
+    ' Step 3: Randomly select a participant from the selected department
+    randomParticipantIndex = Int(Rnd() * departmentParticipants(selectedDept).Count) + 1
+    Dim selectedParticipant As Variant
+    selectedParticipant = departmentParticipants(selectedDept)(randomParticipantIndex)
+
+    ' Extract the random participant's details
+    randompid = selectedParticipant(0) ' pid
+    randomName = selectedParticipant(1) ' Name
+    randomDept = selectedDept & " - " & selectedParticipant(2) ' Department - Designation
+
+    ' Close the connection
     conn.Close
     Set conn = Nothing
 
@@ -142,10 +191,23 @@ Function displayRandomEntry()
     frmRaffle.lblDept.Caption = randomDept
 
     ' Generate and display the current timestamp
-    currentTime = Format(Now(), "yyyy-mm-dd hh:mm:ss")
+    currentTime = Format(Now(), "yyyy-mm-dd hh:nn:ss") ' Corrected time format
     frmRaffle.lblDateTime.Caption = currentTime
-End Function
 
+    Exit Function
+
+ErrorHandler:
+    ' Handle any errors that occur
+    If Not rs Is Nothing Then
+        If rs.State = adStateOpen Then rs.Close
+        Set rs = Nothing
+    End If
+    If Not conn Is Nothing Then
+        If conn.State = adStateOpen Then conn.Close
+        Set conn = Nothing
+    End If
+    MsgBox "An error occurred: " & Err.Description, vbCritical, "Error"
+End Function
 
 Public Sub SaveWinnerData()
     On Error GoTo ErrorHandler ' Commented out for debugging purposes
@@ -244,5 +306,23 @@ Function WinnerCount()
 
     ' Resume execution after an error
     Resume Next
+End Function
+
+Function generateRandomString(length As Integer) As String
+    Dim chars As String
+    Dim result As String
+    Dim i As Integer
+    chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" ' Characters to use
+    result = ""
+    
+    ' Seed the random number generator
+    Randomize
+    
+    ' Generate random characters
+    For i = 1 To length
+        result = result & Mid(chars, Int(Rnd() * Len(chars)) + 1, 1)
+    Next i
+    
+    generateRandomString = result
 End Function
 
