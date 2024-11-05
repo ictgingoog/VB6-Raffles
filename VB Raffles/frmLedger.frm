@@ -146,7 +146,7 @@ Begin VB.Form frmRaffle
       End
       Begin VB.Timer timerExec 
          Enabled         =   0   'False
-         Interval        =   50
+         Interval        =   75
          Left            =   240
          Top             =   480
       End
