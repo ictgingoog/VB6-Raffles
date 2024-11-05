@@ -103,26 +103,23 @@ Function displayRandomEntry()
     Dim randomDept As String
     Dim currentTime As String
     Dim eligibleDepartments As Collection
-    Dim departmentParticipants As Object ' Use Object for dictionary-like behavior
+    Dim departmentParticipants As Object ' Dictionary-like structure for participants by department
     Dim selectedDept As String
-    Dim attempts As Long
     Dim randomDeptIndex As Long
     Dim randomParticipantIndex As Long
-    Const MAX_ATTEMPTS As Long = 10 ' Limit the number of attempts to avoid infinite loops
 
     ' Initialize and open the connection
     Set conn = New ADODB.Connection
-    conn.ConnectionString = DBstr()
+    conn.ConnectionString = DBstr() ' Replace DBstr() with your actual connection string function or value
     conn.Open
 
     ' Initialize the recordset
     Set rs = New ADODB.Recordset
 
-    ' Step 1: Retrieve all eligible departments and participants in a single query
+    ' Step 1: Retrieve all eligible departments and participants in a single optimized query
     rs.Open "SELECT Department, pid, Name, Designation " & _
             "FROM participants " & _
-            "WHERE NOT EXISTS " & _
-            "(SELECT 1 FROM winner WHERE winner.pid = participants.pid)", _
+            "WHERE pid NOT IN (SELECT pid FROM winner)", _
             conn, adOpenStatic, adLockReadOnly, adCmdText
 
     ' Initialize collections to store eligible departments and participants
@@ -133,9 +130,10 @@ Function displayRandomEntry()
     Do While Not rs.EOF
         ' Group participants by department
         If Not departmentParticipants.Exists(rs("Department").Value) Then
-            eligibleDepartments.Add rs("Department").Value
-            departmentParticipants.Add rs("Department").Value, New Collection
+            eligibleDepartments.Add rs("Department").Value ' Add department to eligible list
+            departmentParticipants.Add rs("Department").Value, New Collection ' Create a new collection for participants in this department
         End If
+        ' Add the participant to the department's collection
         departmentParticipants(rs("Department").Value).Add Array(rs("pid").Value, rs("Name").Value, rs("Designation").Value)
         rs.MoveNext
     Loop
@@ -149,32 +147,15 @@ Function displayRandomEntry()
         Exit Function
     End If
 
-    ' Step 2: Loop to find a department with eligible participants
-    attempts = 0
-    Do
-        ' Generate a random index to select a department
-        Randomize ' Initialize the random number generator
-        randomDeptIndex = Int(Rnd() * eligibleDepartments.Count) + 1
-        selectedDept = eligibleDepartments(randomDeptIndex)
-
-        ' Check if the selected department has eligible participants
-        If departmentParticipants(selectedDept).Count > 0 Then
-            Exit Do ' Found a department with eligible participants
-        End If
-
-        ' Increment the attempt counter to avoid infinite loops
-        attempts = attempts + 1
-        If attempts >= MAX_ATTEMPTS Then
-            MsgBox "Unable to find a department with eligible participants.", vbExclamation, "Error"
-            Exit Function
-        End If
-
-    Loop
+    ' Step 2: Randomly select a department with eligible participants
+    Randomize ' Initialize the random number generator
+    randomDeptIndex = Int(Rnd() * eligibleDepartments.Count) + 1 ' Randomly select a department
+    selectedDept = eligibleDepartments(randomDeptIndex) ' Get the randomly selected department
 
     ' Step 3: Randomly select a participant from the selected department
-    randomParticipantIndex = Int(Rnd() * departmentParticipants(selectedDept).Count) + 1
+    randomParticipantIndex = Int(Rnd() * departmentParticipants(selectedDept).Count) + 1 ' Randomly select a participant from the department
     Dim selectedParticipant As Variant
-    selectedParticipant = departmentParticipants(selectedDept)(randomParticipantIndex)
+    selectedParticipant = departmentParticipants(selectedDept)(randomParticipantIndex) ' Get the randomly selected participant
 
     ' Extract the random participant's details
     randompid = selectedParticipant(0) ' pid
